@@ -1,22 +1,23 @@
-def multiply(a, b):
-    return a * b
+class Rectangle:
+    def __init__(self, width, height):
+        self.width = width
+        self.height = height
 
-def isEven(c):
-    if c % 2 == 0:
-        return True
-    else:
-        return False
+    def area(self):
+        return self.width * self.height
 
-def rotateLeft(d):
-    e = d.copy()
-    temp = e[0]
+def main():
+    r1 = Rectangle(4, 5)
+    r2 = Rectangle(10, 2)
 
-    for i in range(len(e) - 1):
-        e[i] = e[i + 1]
+    print(r1.width)
+    print(r1.height)
+    print(r1.area())
 
-    e[len(e) - 1] = temp
-
-    return e
+    print(r2.width)
+    print(r2.height)
+    print(r2.area())
 
 
-
+if __name__ == "__main__":
+    main()
