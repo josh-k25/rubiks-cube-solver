@@ -74,3 +74,101 @@
 - Translate those decisions into white-cross control logic.
 - Test solving one edge from several different locations before generalizing to all four white edges.
 - Only after individual white-edge solving works, build `solveWhiteCross()`.
+
+## 2026-09-010
+
+### Worked on
+- Created isEdgeSolved() which checks if an edge is in its solved state (first used for white cross)
+- Created getEdgeData() which returns the edge position and orientation 
+- Decided on an a solving solution that roughly follows this structure for the white cross edges (focusing on replicating my own human thought process while solving it) (o = 0 --> orientation = 0 or no flip relative to solved cube):
+  1. Check if edge is already in the right position (isEdgeSolved())
+  2. Retreive edge pos and ori (getEdgedata())
+3. Follow flowchart for solving (using UF as the target edge):
+I. If located at UF with o = 0:
+   - Solved, do nothing.
+II. If located at FL with o = 1:
+   - Do F
+   - Solved.
+III. If located at FR with o = 1:
+   - Do F'
+   - Solved.
+IV. If located at DF with o = 0:
+   - Do F2
+   - Solved.
+V. If located at DL with o = 0:
+   - Do D
+   - This moves it to DF with o = 0.
+   - Re-check.
+VI. If located at DB with o = 0:
+   - Do D2
+   - This moves it to DF with o = 0.
+   - Re-check.
+VII. If located at DR with o = 0:
+   - Do D'
+   - This moves it to DF with o = 0.
+   - Re-check.
+VIII. If located at FL with o = 0:
+   - Do L'
+   - This moves it to UL with o = 0.
+   - Re-check.
+IX. If located at FR with o = 0:
+   - Do R
+   - This moves it to UR with o = 0.
+   - Re-check.
+X. If located at BL with o = 0:
+   - Do L
+   - This moves it to UL with o = 0.
+   - Re-check.
+XI. If located at BR with o = 0:
+   - Do R'
+   - This moves it to UR with o = 0.
+   - Re-check.
+XII. If located at UR with o = 0:
+   - Do U
+   - Solved.
+XIII. If located at UL with o = 0:
+   - Do U'
+   - Solved.
+XIV. If located at UB with o = 0:
+   - Do U2
+   - Solved.
+XV. If located at DL with o = 1:
+   - Do L'
+   - This moves it to FL with o = 1.
+   - Re-check.
+XVI. If located at DR with o = 1:
+   - Do R
+   - This moves it to FR with o = 1.
+   - Re-check.
+XVII. If located at DB with o = 1:
+   - Do D
+   - This moves it to DL with o = 1.
+   - Re-check.
+XVIII. If located at DF with o = 1:
+   - Do F
+   - This moves it to FL with o = 0.
+   - Re-check.
+XIX. If located at UL with o = 1:
+   - Do L
+   - This moves it to FL with o = 1.
+   - Re-check.
+XX. If located at UR with o = 1:
+   - Do R'
+   - This moves it to FR with o = 1.
+   - Re-check.
+XXI. If located at UB with o = 1:
+   - Do U
+   - This moves it to UR with o = 1.
+   - Re-check.
+XXII. If located at UF with o = 1:
+   - Do U
+   - This moves it to UL with o = 1.
+   - Re-check.
+XXIII. If located at BL with o = 1:
+   - Do L2
+   - This moves it to FL with o = 1.
+   - Re-check.
+XXIV. If located at BR with o = 1:
+   - Do R2
+   - This moves it to FR with o = 1.
+   - Re-check.

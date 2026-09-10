@@ -276,3 +276,15 @@ class cubeState:
         assert cube.cornerOrientation == originalCornerOrientation
 
         print(f"{move.name}^4 identity test passed")
+
+    #checking for edge being solved is the first step in solving white cross
+    #Argument will be Edge.XX so no need to have Edge. in method
+    def isEdgeSolved(self, edge):
+        if self.edgePosition[edge] == edge and self.edgeOrientation[edge] == 0:
+            return True
+        else:
+            return False
+
+    def getEdgeData(self, edge):
+
+        return (self.edgePosition.index(edge), self.edgeOrientation[edge])

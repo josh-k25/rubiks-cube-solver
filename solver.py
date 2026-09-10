@@ -6,10 +6,11 @@ def checkWhiteCrossSolved(self):
     else:
         return False
 
-def solveWhiteCross(selfj, moves):
+def solveWhiteCross(self, moves):
     pass
 #1. is UX already solved? if yes, next edge. if no, next step
-#2. where is the UX position?
-#3. what is the orientation?
-#4. what situation is the cubie in?
-#5. perform set algo to solve (not sure how to do this)?
+#2. perform set algo to solve (not sure how to do this)?
+#3. 
+
+    #Case for when edge 
+    
