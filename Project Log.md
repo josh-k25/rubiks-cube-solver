@@ -75,100 +75,65 @@
 - Test solving one edge from several different locations before generalizing to all four white edges.
 - Only after individual white-edge solving works, build `solveWhiteCross()`.
 
-## 2026-09-010
+## 2026-09-10
 
 ### Worked on
-- Created isEdgeSolved() which checks if an edge is in its solved state (first used for white cross)
-- Created getEdgeData() which returns the edge position and orientation 
-- Decided on an a solving solution that roughly follows this structure for the white cross edges (focusing on replicating my own human thought process while solving it) (o = 0 --> orientation = 0 or no flip relative to solved cube):
-  1. Check if edge is already in the right position (isEdgeSolved())
-  2. Retreive edge pos and ori (getEdgedata())
-3. Follow flowchart for solving (using UF as the target edge):
-I. If located at UF with o = 0:
-   - Solved, do nothing.
-II. If located at FL with o = 1:
-   - Do F
-   - Solved.
-III. If located at FR with o = 1:
-   - Do F'
-   - Solved.
-IV. If located at DF with o = 0:
-   - Do F2
-   - Solved.
-V. If located at DL with o = 0:
-   - Do D
-   - This moves it to DF with o = 0.
-   - Re-check.
-VI. If located at DB with o = 0:
-   - Do D2
-   - This moves it to DF with o = 0.
-   - Re-check.
-VII. If located at DR with o = 0:
-   - Do D'
-   - This moves it to DF with o = 0.
-   - Re-check.
-VIII. If located at FL with o = 0:
-   - Do L'
-   - This moves it to UL with o = 0.
-   - Re-check.
-IX. If located at FR with o = 0:
-   - Do R
-   - This moves it to UR with o = 0.
-   - Re-check.
-X. If located at BL with o = 0:
-   - Do L
-   - This moves it to UL with o = 0.
-   - Re-check.
-XI. If located at BR with o = 0:
-   - Do R'
-   - This moves it to UR with o = 0.
-   - Re-check.
-XII. If located at UR with o = 0:
-   - Do U
-   - Solved.
-XIII. If located at UL with o = 0:
-   - Do U'
-   - Solved.
-XIV. If located at UB with o = 0:
-   - Do U2
-   - Solved.
-XV. If located at DL with o = 1:
-   - Do L'
-   - This moves it to FL with o = 1.
-   - Re-check.
-XVI. If located at DR with o = 1:
-   - Do R
-   - This moves it to FR with o = 1.
-   - Re-check.
-XVII. If located at DB with o = 1:
-   - Do D
-   - This moves it to DL with o = 1.
-   - Re-check.
-XVIII. If located at DF with o = 1:
-   - Do F
-   - This moves it to FL with o = 0.
-   - Re-check.
-XIX. If located at UL with o = 1:
-   - Do L
-   - This moves it to FL with o = 1.
-   - Re-check.
-XX. If located at UR with o = 1:
-   - Do R'
-   - This moves it to FR with o = 1.
-   - Re-check.
-XXI. If located at UB with o = 1:
-   - Do U
-   - This moves it to UR with o = 1.
-   - Re-check.
-XXII. If located at UF with o = 1:
-   - Do U
-   - This moves it to UL with o = 1.
-   - Re-check.
-XXIII. If located at BL with o = 1:
-   - Do L2
-   - This moves it to FL with o = 1.
-   - Re-check.
-XXIV. If located at BR with o = 1:
-   - Do R2
-   - This moves it to FR with o = 1.
-   - Re-check.
+
+- Created `isEdgeSolved()` which checks if an edge is in its solved state (first used for white cross).
+- Created `getEdgeData()` which returns an edge's current position and orientation.
+- Started designing the control logic for solving individual white-cross edges.
+- Decided to base the solver on my own human solving process rather than immediately using a predefined algorithm.
+- Created a full state-transition flow for solving the `UF` edge based on its current position and orientation.
+- Designed the edge-solving process so that after each move the cubie state is re-checked instead of hardcoding one long algorithm for every possible starting state.
+- Started thinking about how the same `solveWhiteEdge()` structure can eventually be reused for `UF`, `UR`, `UB`, and `UL`.
+
+### Learned
+
+- A solver can be structured similarly to an FSM:
+  - inspect the current state
+  - classify the state
+  - choose an action
+  - apply the action
+  - re-check the state
+- `isEdgeSolved()` and `getEdgeData()` serve different purposes:
+  - `isEdgeSolved()` answers whether a target edge is finished.
+  - `getEdgeData()` tells the solver where the target edge currently is and how it is oriented.
+- Python's `.index()` can be used to locate a particular cubie in the position list.
+- When manually looping through a list, `for value in list` iterates through the stored values rather than the indices. To explicitly access indices, use an index-based loop or `enumerate()`.
+- Edge orientation is stored by **position**, so after finding where a cubie is, its orientation has to be read from that same position.
+- Solving cases can be simplified by making different states converge into common intermediate states instead of defining a complete independent algorithm for every possible state.
+- For example, several `UF` states can transition toward known states such as `DF,0`, `FL,1`, or `FR,1`, which can then be solved using already-defined logic.
+- Breaking the solver into individual state transitions should make the eventual RTL implementation easier because the software control flow already resembles controller/FSM behavior.
+- The four white-cross edges are rotationally similar:
+  - `UF` uses the F side
+  - `UR` uses the R side
+  - `UB` uses the B side
+  - `UL` uses the L side
+- Because of this symmetry, I should be able to reuse one general `solveWhiteEdge()` structure rather than writing four completely separate solvers.
+
+### Problems
+
+- Need to convert the completed `UF` state-transition flow into working Python control logic.
+- Need to verify every `(position, orientation)` transition against the cube model rather than relying only on visualization.
+- Need to figure out how to generalize the `UF` logic cleanly for `UR`, `UB`, and `UL`.
+- Solving later white-cross edges may disturb edges that were already solved, so the full cross solver will need to preserve previous progress.
+- Need to decide whether the final controller should use:
+  - `if/elif` logic for each state, or
+  - a lookup table mapping `(position, orientation)` directly to the next move.
+- The current transition flow is only designed for one target edge and has not yet been tested end-to-end.
+
+### Next
+
+- Implement `solveWhiteEdge()` for `Edge.UF` using the state-transition flow.
+- Start with an `if/elif` implementation so the decision logic is easy to inspect and debug.
+- For each loop iteration:
+  1. Check whether `UF` is solved.
+  2. Retrieve its current position and orientation.
+  3. Select one move based on the current state.
+  4. Apply the move.
+  5. Record the move.
+  6. Re-check the resulting state.
+- Test the `UF` solver from many different starting positions and both orientations.
+- Verify that every possible UF state eventually reaches `UF, orientation 0`.
+- Once the UF solver works reliably, generalize the same structure to `UR`, `UB`, and `UL`.
+- After individual edge solving works, create `solveWhiteCross()` to sequence the four white edges while preserving previously solved ones.
