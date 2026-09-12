@@ -257,6 +257,14 @@ class cubeState:
 
         return newState
 
+        def applyMoves(self, moves):
+            currentState = self
+
+            for move in moves:
+                currentState = currentState.applyMove(move)
+
+            return currentState
+
     def identityTest(self, move):
         cube = cubeState()
 
@@ -288,3 +296,14 @@ class cubeState:
     def getEdgeData(self, edge):
 
         return (self.edgePosition.index(edge), self.edgeOrientation[edge])
+
+    def isCornerSolved(self, corner):
+        if self.cornerPosition[corner] == corner and self.cornerOrientation[corner] == 0:
+            return True
+        else:
+            return False
+
+    def getCornerData(self, corner):
+
+        return (self.cornerPosition.index(corner), self.cornerOrientation[corner])
+    

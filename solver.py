@@ -7,7 +7,7 @@ def checkWhiteCrossSolved(self):
         return False
 
 def solveWhiteCross(self, moves):
-    pass
+    
 #1. is UX already solved? if yes, next edge. if no, next step
 #2. perform set algo to solve (not sure how to do this)?
 #3. 
@@ -17,7 +17,7 @@ def solveWhiteCross(self, moves):
 
 def solveEdge(self, edge):
 
-    # target D-layer position and insertion move for each white edge
+    # target D-layer position and insertion move for each white edge to solve
     EDGE_SOLVE_DATA = {
         Edge.UF: (Edge.DF, Move.F2),
         Edge.UR: (Edge.DR, Move.R2),
@@ -25,8 +25,9 @@ def solveEdge(self, edge):
         Edge.UL: (Edge.DL, Move.L2)
     }
 
-    targetPosition, insertMove = EDGE_SOLVE_DATA[edge]
+    targetPosition, solveMove = EDGE_SOLVE_DATA[edge]
 
+    # While true is an infinite loop; use break to leave the loop
     # Keep rotating D until the target edge is underneath
     # the position where it belongs
     while True:
@@ -36,15 +37,18 @@ def solveEdge(self, edge):
         if position == targetPosition and orientation == 0:
             break
 
+        # loop D until it hits the right target position
         self = self.applyMove(Move.D)
 
     # Insert the edge into the U-layer cross
-    self = self.applyMove(insertMove)
+    self = self.applyMove(solveMove)
 
     return self
 
+#get edge to D layer so that it can be solved
 def stageEdge(self, edge):
 
+#dictionaries to reference the white edges and target (D) positions
     WHITE_EDGES = (
         Edge.UF,
         Edge.UR,
@@ -59,6 +63,7 @@ def stageEdge(self, edge):
         Edge.DL
     )
 
+    #reference table on what to do when the edge piece is in the middle of the rubix cube
     MIDDLE_STAGE_DATA = {
         # position, orientation : (required D slot, move)
 
@@ -70,7 +75,7 @@ def stageEdge(self, edge):
         (Edge.FR, 1): (Edge.DF, Move.F),
         (Edge.FL, 1): (Edge.DF, Move.F_PRIME),
         (Edge.BR, 1): (Edge.DB, Move.B_PRIME),
-        (Edge.BL, 1): (Edge.DB, Move.B)
+        (Edge.BL, 1): (Edge.DB, Move.B)     
     }
 
     while True:
@@ -90,9 +95,9 @@ def stageEdge(self, edge):
             ]
 
             #protect white edges that are already staged.
+            #if there already is a white edge piece there do D to move it and then apply the setup move
             while (
-                self.edgePosition[requiredDPosition] in WHITE_EDGES
-                and
+                self.edgePosition[requiredDPosition] in WHITE_EDGES and
                 self.edgeOrientation[requiredDPosition] == 0
             ):
                 self = self.applyMove(Move.D)
@@ -100,8 +105,8 @@ def stageEdge(self, edge):
             self = self.applyMove(move)
             continue
 
-        #d layer but flipped
-
+        #D layer but orientation is wrong
+        #either edge piece starts there or its from the middle layer
         if position in D_POSITIONS and orientation == 1:
 
             #rotate target until it reaches DF.
@@ -110,7 +115,7 @@ def stageEdge(self, edge):
                 position, orientation = self.getEdgeData(edge)
 
             self = self.applyMove(Move.F)
-            # Re-check as a middle-layer case
+            #it is sent back to middle layer but with correct for solving orientation
             continue
 
         # U layer
@@ -122,7 +127,7 @@ def stageEdge(self, edge):
                 self = self.applyMove(Move.U)
                 position, orientation = self.getEdgeData(edge)
 
-            # Make sure DF does not contain an already staged edge.
+            #make sure DF does not contain an already staged edge.
             while (
                 self.edgePosition[Edge.DF] in WHITE_EDGES
                 and
@@ -140,3 +145,67 @@ def stageEdge(self, edge):
 
             # Re-check resulting state
             continue
+
+def solveCorner(self, corner):
+
+    WHITE_CORNERS = (
+        Corner.URF,
+        Corner.UFL,
+        Corner.ULB,
+        Corner.UBR
+    )
+
+    CORNER_TARGET_POSITION = {
+        Corner.URF: Corner.DFR,
+        Corner.UFL: Corner.DLF,
+        Corner.ULB: Corner.DBL,
+        Corner.UBR: Corner.DRB
+    }
+
+    righty = (
+        Move.R,
+        Move.U,
+        Move.R_PRIME,
+        Move.U_PRIME
+    )
+
+    position, orientation = self.getCornerData(corner) 
+
+    # get corner in right corner below target
+    while (position != CORNER_TARGET_POSITION[corner] and orientation != 0):
+        
+        self = self.applyMove(Move.D)
+        position, orientation = self.getCornerData(corner)
+
+    #do sexy move😏
+    self = self.applyMoves(righty)
+
+    def stageCorner(self, corner):
+
+
+        #Set moves for when a corner is in the wrong corner and needs to be ejected to the D layer
+        CORNER_EJECTION_MOVES = {
+                Corner.URF: (Move.R_PRIME, Move.D_PRIME, Move.R),
+                Corner.UFL: (Move.L, Move.D, Move.L_PRIME),
+                Corner.ULB: (Move.L_PRIME, Move.D_PRIME, Move.L),
+                Corner.UBR: (Move.R, Move.D, Move.R_PRIME)
+            }
+
+        while True:
+
+                position = self.getCornerData(corner)
+
+                if self.isCornerSolved(corner):
+                    return self
+
+                #position in U corner but no the right one
+                if position in WHITE_CORNERS and position != corner:
+                    ejectionmoves  = CORNER_EJECTION_MOVES[position]
+
+                    self = self.applyMoves(ejectionmoves)
+
+                    return self
+
+                return self
+
+
