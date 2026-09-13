@@ -8,12 +8,44 @@ def checkWhiteCrossSolved(self):
 
 def solveWhiteCross(self, moves):
     
-#1. is UX already solved? if yes, next edge. if no, next step
-#2. perform set algo to solve (not sure how to do this)?
-#3. 
+    #    is it already solved?
+    #    yes → next corner
+    #    no
+    #    ↓
+    #   stageCorner(corner)
+    #    ↓
+    #   target is somewhere on D
+    #    ↓
+    #   rotate D until target is
+    #   underneath its destination
+    #    ↓
+    #   perform appropriate insertion
+    #    ↓
+    #   check isCornerSolved()
+    #    ↓
+    #   repeat if necessary
 
-    #Case for when edge 
+    WHITE_EDGES = (
+        Edge.UF,
+        Edge.UR,
+        Edge.UB,
+        Edge.UL
+    )
 
+    # If the whole cross is already solved, do nothing
+    if checkWhiteCrossSolved(self):
+        return self
+
+    # First, stage every white edge onto the D layer
+    # with orientation 0
+    for edge in WHITE_EDGES:
+        self = stageEdge(self, edge)
+
+    # Then insert each staged edge into its solved U position
+    for edge in WHITE_EDGES:
+        self = solveEdge(self, edge)
+
+    return self
 
 def solveEdge(self, edge):
 
@@ -162,50 +194,116 @@ def solveCorner(self, corner):
         Corner.UBR: Corner.DRB
     }
 
-    righty = (
-        Move.R,
-        Move.U,
+    CORNER_INSERTION_MOVES = {
+    Corner.URF: (
         Move.R_PRIME,
-        Move.U_PRIME
+        Move.D_PRIME,
+        Move.R,
+        Move.D
+    ),
+
+    Corner.UFL: (
+        Move.L,
+        Move.D,
+        Move.L_PRIME,
+        Move.D_PRIME
+    ),
+
+    Corner.ULB: (
+        Move.L_PRIME,
+        Move.D_PRIME,
+        Move.L,
+        Move.D
+    ),
+
+    Corner.UBR: (
+        Move.R,
+        Move.D,
+        Move.R_PRIME,
+        Move.D_PRIME
+    )
+}
+
+    if self.isCornerSolved(corner):
+        return self
+
+    position, _ = self.getCornerData(corner)
+
+    # rotate D until the target corner is underneath
+    # the U-layer position where it belongs
+    while position != CORNER_TARGET_POSITION[corner]:
+        self = self.applyMove(Move.D)
+        position, _ = self.getCornerData(corner)
+
+    insertionMoves = CORNER_INSERTION_MOVES[corner]
+
+    # repeat the sexy move😏 until both
+    # position and orientation are correct
+    while not self.isCornerSolved(corner):
+        self = self.applyMoves(insertionMoves)
+
+    return self
+
+def stageCorner(self, corner):
+
+    WHITE_CORNERS = (
+        Corner.URF,
+        Corner.UFL,
+        Corner.ULB,
+        Corner.UBR
     )
 
-    position, orientation = self.getCornerData(corner) 
+    D_CORNERS = (
+        Corner.DFR,
+        Corner.DLF,
+        Corner.DBL,
+        Corner.DRB
+    )
 
-    # get corner in right corner below target
-    while (position != CORNER_TARGET_POSITION[corner] and orientation != 0):
-        
-        self = self.applyMove(Move.D)
-        position, orientation = self.getCornerData(corner)
+    #Set moves for when a corner is in the wrong corner and needs to be ejected to the D layer
+    CORNER_EJECTION_MOVES = {
+            Corner.URF: (Move.R_PRIME, Move.D_PRIME, Move.R),
+            Corner.UFL: (Move.L, Move.D, Move.L_PRIME),
+            Corner.ULB: (Move.L_PRIME, Move.D_PRIME, Move.L),
+            Corner.UBR: (Move.R, Move.D, Move.R_PRIME)
+        }
 
-    #do sexy move😏
-    self = self.applyMoves(righty)
+    while True:
 
-    def stageCorner(self, corner):
+            position, _ = self.getCornerData(corner)
 
-
-        #Set moves for when a corner is in the wrong corner and needs to be ejected to the D layer
-        CORNER_EJECTION_MOVES = {
-                Corner.URF: (Move.R_PRIME, Move.D_PRIME, Move.R),
-                Corner.UFL: (Move.L, Move.D, Move.L_PRIME),
-                Corner.ULB: (Move.L_PRIME, Move.D_PRIME, Move.L),
-                Corner.UBR: (Move.R, Move.D, Move.R_PRIME)
-            }
-
-        while True:
-
-                position = self.getCornerData(corner)
-
-                if self.isCornerSolved(corner):
-                    return self
-
-                #position in U corner but no the right one
-                if position in WHITE_CORNERS and position != corner:
-                    ejectionmoves  = CORNER_EJECTION_MOVES[position]
-
-                    self = self.applyMoves(ejectionmoves)
-
-                    return self
-
+            #if corner is solved move on
+            if self.isCornerSolved(corner):
                 return self
 
+            #if corner is staged move on
+            if position in D_CORNERS:
+                return self
+    
+            #position in U corner but no the right one
+            if position in WHITE_CORNERS:
+                ejectionmoves  = CORNER_EJECTION_MOVES[position]
+
+                self = self.applyMoves(ejectionmoves)
+
+            continue
+
+def solveWhiteCorners(self):
+
+    WHITE_CORNERS = (
+        Corner.URF,
+        Corner.UFL,
+        Corner.ULB,
+        Corner.UBR
+    )
+
+    for corner in WHITE_CORNERS:
+
+        if self.isCornerSolved(corner):
+            continue
+
+        self = stageCorner(self, corner)
+        self = solveCorner(self, corner)
+
+    return self
 

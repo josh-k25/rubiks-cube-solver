@@ -232,13 +232,13 @@ class cubeState:
     def applyMove(currentState, move):
     # select mapping/delta tables based on move
 
-        baseMove, turns = MOVE_DEFINITIONS[Move.R_PRIME]
+        baseMove, turns = MOVE_DEFINITIONS[move]
 
-        newState = cubeState()
+        edgeMapping, edgeOrientation, cornerMapping, cornerOrientation = BASE_MOVE_TABLE[baseMove]
 
         for i in range(turns):
 
-            edgeMapping, edgeOrientation, cornerMapping, cornerOrientation = BASE_MOVE_TABLE[baseMove]
+            newState = cubeState()
 
             for destination in range(12):
                 source = edgeMapping[destination]
@@ -253,17 +253,18 @@ class cubeState:
                 newState.cornerPosition[destination] = currentState.cornerPosition[source]
         
                 newState.cornerOrientation[destination] = (currentState.cornerOrientation[source] + cornerOrientation[destination]) % 3
-        
+
+            currentState = newState
 
         return newState
 
-        def applyMoves(self, moves):
-            currentState = self
+    def applyMoves(self, moves):
+        currentState = self
 
-            for move in moves:
-                currentState = currentState.applyMove(move)
+        for move in moves:
+            currentState = currentState.applyMove(move)
 
-            return currentState
+        return currentState
 
     def identityTest(self, move):
         cube = cubeState()
@@ -294,8 +295,11 @@ class cubeState:
             return False
 
     def getEdgeData(self, edge):
+        #get the position of the cubie
+        position = self.edgePosition.index(edge)
 
-        return (self.edgePosition.index(edge), self.edgeOrientation[edge])
+        #use cubie as a reference to check what orientation it is 
+        return (position,self.edgeOrientation[position])
 
     def isCornerSolved(self, corner):
         if self.cornerPosition[corner] == corner and self.cornerOrientation[corner] == 0:
@@ -305,5 +309,51 @@ class cubeState:
 
     def getCornerData(self, corner):
 
-        return (self.cornerPosition.index(corner), self.cornerOrientation[corner])
-    
+        position = self.cornerPosition.index(corner)
+
+        return (position, self.cornerOrientation[position])
+
+    def isFirstLayerSolved(self):
+
+        if (
+            self.isEdgeSolved(Edge.UR)
+            and self.isEdgeSolved(Edge.UF)
+            and self.isEdgeSolved(Edge.UL)
+            and self.isEdgeSolved(Edge.UB)
+            and self.isCornerSolved(Corner.URF)
+            and self.isCornerSolved(Corner.UFL)
+            and self.isCornerSolved(Corner.ULB)
+            and self.isCornerSolved(Corner.UBR)
+        ):
+            return True
+
+        else:
+            return False
+
+    def printState(self):
+
+        print("EDGES")
+        print("-----")
+
+        for position in Edge:
+            cubie = self.edgePosition[position]
+            orientation = self.edgeOrientation[position]
+
+            print(
+                f"{position.name}: "
+                f"{cubie.name}, orientation {orientation}"
+            )
+
+        print()
+
+        print("CORNERS")
+        print("-------")
+
+        for position in Corner:
+            cubie = self.cornerPosition[position]
+            orientation = self.cornerOrientation[position]
+
+            print(
+                f"{position.name}: "
+                f"{cubie.name}, orientation {orientation}"
+            )

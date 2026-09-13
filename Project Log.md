@@ -137,3 +137,102 @@
 - Verify that every possible UF state eventually reaches `UF, orientation 0`.
 - Once the UF solver works reliably, generalize the same structure to `UR`, `UB`, and `UL`.
 - After individual edge solving works, create `solveWhiteCross()` to sequence the four white edges while preserving previously solved ones.
+
+## 2026-09-11
+
+### Worked on
+
+- Continued implementing the Layer-by-Layer solver.
+- Developed the white-cross solving strategy.
+- Split white-cross solving into two stages:
+  - `stageEdge()` moves each white edge to the D layer with orientation 0.
+  - `solveEdge()` aligns the staged edge beneath its correct U-layer position and inserts it with a half turn.
+- Created lookup tables for:
+  - White-edge target D positions.
+  - Middle-layer edge staging moves.
+  - Final white-edge insertion moves.
+- Added logic to protect white edges that have already been staged on the D layer.
+- Handled white edges starting in:
+  - U layer.
+  - Middle layer.
+  - D layer with incorrect orientation.
+- Continued using the cubie representation to query each edge's current position and orientation.
+
+### Learned
+
+- Breaking the solver into a staging phase and an insertion phase significantly reduces the number of cases each function needs to handle.
+- A useful solver invariant is that previously staged white edges should not be destroyed while staging another edge.
+- D-layer rotations are useful for repositioning staged pieces without changing their orientation.
+- Lookup tables are useful for representing deterministic cube-solving decisions instead of writing large chains of conditionals.
+- A solver can normalize many different starting states into a smaller set of predictable states before performing the final solve step.
+
+### Problems
+
+- Need to verify that every possible white-edge position and orientation converges correctly through `stageEdge()`.
+- Need to make sure already staged edges remain protected while other edges are manipulated.
+- Need to test the complete white-cross process from actual scrambles rather than only individual cases.
+
+### Next
+
+- Connect `stageEdge()` and `solveEdge()` into a full `solveWhiteCross()` function.
+- Test the white-cross solver end-to-end.
+- Begin first-layer corner solving after the cross is reliable.
+
+
+## 2026-09-12
+
+### Worked on
+
+- Created `solveWhiteCross()` to coordinate the white-cross solver:
+  - Stage all four white edges.
+  - Insert all four white edges into their solved positions.
+- Started implementing the first-layer corner solver.
+- Created `stageCorner()` to normalize unsolved white corners onto the D layer.
+- Added handling for:
+  - Corners already solved.
+  - Corners already somewhere on the D layer.
+  - Unsolved corners on the U layer that need to be ejected.
+- Created a mapping between each white corner and the D-layer position directly underneath its destination:
+  - URF → DFR
+  - UFL → DLF
+  - ULB → DBL
+  - UBR → DRB
+- Created corner ejection lookup tables based on the current U-layer position.
+- Started `solveCorner()` to rotate the D layer until a staged corner is underneath its destination.
+- Replaced the original `R U R' U'` insertion idea with D-layer-based insertion sequences so the completed U-layer white cross is preserved.
+- Created separate corner insertion sequences for URF, UFL, ULB, and UBR.
+- Added repeated corner insertion until `isCornerSolved()` reports both correct position and orientation.
+- Fixed function indentation so solver functions are top-level rather than accidentally nested.
+- Corrected use of returned cube states from `applyMove()` and `applyMoves()`.
+- Used tuple unpacking with `_` when only the cubie's position is needed.
+
+### Learned
+
+- Because the white layer is being solved on U, the opposite D face should be used as the working layer during first-layer corner insertion.
+- `R U R' U'` is not appropriate for this cube orientation because it disturbs the already solved U-layer cross.
+- Corner solving can also be reduced to a staging problem:
+  - Get the target corner onto D.
+  - Align it underneath its target.
+  - Apply the target-specific insertion sequence until solved.
+- The corner's orientation does not matter while aligning it underneath its destination; orientation is handled during insertion.
+- `position, _ = getCornerData(corner)` is useful when orientation is intentionally irrelevant.
+- Functions such as `applyMove()` and `applyMoves()` return a new cube state, so the returned state must be reassigned.
+- Python indentation determines function scope, so accidentally indenting one `def` inside another changes the program structure.
+
+### Problems
+
+- Need to test the corner insertion sequences against the actual cube model.
+- Need to verify that solving a corner preserves the white cross.
+- Need to verify that solving later corners preserves previously solved corners.
+- Need to test `stageCorner()` for all U-layer and D-layer starting positions and orientations.
+- Move-history tracking is still not implemented even though a `moves` parameter exists in parts of the solver.
+
+### Next
+
+- Test `solveWhiteCross()` on several controlled scrambles.
+- Test `stageCorner()` and `solveCorner()` first with URF.
+- Test URF from different positions and orientations.
+- Verify the white cross remains solved after every corner insertion.
+- Repeat testing for UFL, ULB, and UBR.
+- Build `solveWhiteCorners()` to coordinate all four corners.     
+- Verify the complete first layer before beginning second-layer edges.

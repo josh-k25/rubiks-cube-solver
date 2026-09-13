@@ -1,16 +1,40 @@
-from cube import cubeState, Move, Edge, Corner
+from cube import cubeState, Move
+from solver import solveWhiteCross, solveWhiteCorners, checkWhiteCrossSolved
 
 def main():
+
     cube = cubeState()
 
-    for move in Move:
-        cube.identityTest(move)
+    # mini scramble
+    scramble = (
+        Move.R,
+        Move.F,
+        Move.D
+    )
 
-    print(cube.checkWhiteCrossSolved())
+    cube = cube.applyMoves(scramble)
 
-    cube = cube.applyMove(Move.U)
+    print("After scramble:")
+    print("White cross solved:", checkWhiteCrossSolved(cube))
+    print("First layer solved:", cube.isFirstLayerSolved())
 
-    print(cube.checkWhiteCrossSolved())
+
+    # solve white cross
+    cube = solveWhiteCross(cube, [])
+
+    print("\nAfter white cross:")
+    print("White cross solved:", checkWhiteCrossSolved(cube))
+
+
+    # solve white corners
+    cube = solveWhiteCorners(cube)
+
+    print("\nAfter white corners:")
+    print("First layer solved:", cube.isFirstLayerSolved())
+
+    assert cube.isFirstLayerSolved()
+
+    print("\nLayer 1 test passed!")
 
 
 if __name__ == "__main__":
