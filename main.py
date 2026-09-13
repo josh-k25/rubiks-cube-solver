@@ -1,40 +1,53 @@
+import random
+
 from cube import cubeState, Move
 from solver import solveWhiteCross, solveWhiteCorners, checkWhiteCrossSolved
 
+
 def main():
 
-    cube = cubeState()
+    for test in range(1, 6):
 
-    # mini scramble
-    scramble = (
-        Move.R,
-        Move.F,
-        Move.D
-    )
+        cube = cubeState()
 
-    cube = cube.applyMoves(scramble)
+        # Generate random 10-move scramble
+        scramble = tuple(
+            random.choice(list(Move))
+            for _ in range(10)
+        )
 
-    print("After scramble:")
-    print("White cross solved:", checkWhiteCrossSolved(cube))
-    print("First layer solved:", cube.isFirstLayerSolved())
+        print(f"\nTEST {test}")
 
+        print(
+            "Scramble:",
+            " ".join(move.name for move in scramble)
+        )
 
-    # solve white cross
-    cube = solveWhiteCross(cube, [])
+        cube = cube.applyMoves(scramble)
 
-    print("\nAfter white cross:")
-    print("White cross solved:", checkWhiteCrossSolved(cube))
+        print("After scramble:")
+        print("White cross solved:", checkWhiteCrossSolved(cube))
+        print("First layer solved:", cube.isFirstLayerSolved())
 
+        # Solve white cross
+        cube = solveWhiteCross(cube, [])
 
-    # solve white corners
-    cube = solveWhiteCorners(cube)
+        print("\nAfter white cross:")
+        print("White cross solved:", checkWhiteCrossSolved(cube))
 
-    print("\nAfter white corners:")
-    print("First layer solved:", cube.isFirstLayerSolved())
+        assert checkWhiteCrossSolved(cube)
 
-    assert cube.isFirstLayerSolved()
+        # Solve white corners
+        cube = solveWhiteCorners(cube)
 
-    print("\nLayer 1 test passed!")
+        print("\nAfter white corners:")
+        print("First layer solved:", cube.isFirstLayerSolved())
+
+        assert cube.isFirstLayerSolved()
+
+        print(f"TEST {test} PASSED")
+
+    print("\nALL 5 LAYER 1 TESTS PASSED!")
 
 
 if __name__ == "__main__":
