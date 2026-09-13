@@ -1,7 +1,7 @@
 import random
 
-from cube import cubeState, Move
-from solver import solveWhiteCross, solveWhiteCorners, checkWhiteCrossSolved
+from cube import cubeState, Move, Edge
+from solver import checkWhiteCrossSolved, solveFirstLayer, solveSecondLayer
 
 
 def main():
@@ -13,7 +13,7 @@ def main():
         # Generate random 10-move scramble
         scramble = tuple(
             random.choice(list(Move))
-            for _ in range(10)
+            for _ in range(1000)
         )
 
         print(f"\nTEST {test}")
@@ -29,25 +29,37 @@ def main():
         print("White cross solved:", checkWhiteCrossSolved(cube))
         print("First layer solved:", cube.isFirstLayerSolved())
 
-        # Solve white cross
-        cube = solveWhiteCross(cube, [])
+        # solve first layer
+        cube = solveFirstLayer(cube)
 
-        print("\nAfter white cross:")
-        print("White cross solved:", checkWhiteCrossSolved(cube))
-
-        assert checkWhiteCrossSolved(cube)
-
-        # Solve white corners
-        cube = solveWhiteCorners(cube)
-
-        print("\nAfter white corners:")
+        print("\nAfter first layer:")
         print("First layer solved:", cube.isFirstLayerSolved())
 
         assert cube.isFirstLayerSolved()
 
+        # solve second layer
+        cube = solveSecondLayer(cube)
+
+        secondLayerSolved = (
+            cube.isEdgeSolved(Edge.FL)
+            and cube.isEdgeSolved(Edge.FR)
+            and cube.isEdgeSolved(Edge.BL)
+            and cube.isEdgeSolved(Edge.BR)
+        )
+
+        print("\nAfter second layer:")
+        print("First layer still solved:", cube.isFirstLayerSolved())
+        print("Second layer solved:", secondLayerSolved)
+
+        # second-layer algorithms should not destroy layer 1
+        assert cube.isFirstLayerSolved()
+
+        # All four middle-layer edges should now be solved
+        assert secondLayerSolved
+
         print(f"TEST {test} PASSED")
 
-    print("\nALL 5 LAYER 1 TESTS PASSED!")
+    print("\nALL 5 FIRST + SECOND LAYER TESTS PASSED!")
 
 
 if __name__ == "__main__":

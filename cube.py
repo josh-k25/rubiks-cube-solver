@@ -330,6 +330,27 @@ class cubeState:
         else:
             return False
 
+    #going to check for first and second layer. not only the second as the name might imply
+    def isSecondLayerSolved(self):
+        if (
+            self.isEdgeSolved(Edge.UR)
+            and self.isEdgeSolved(Edge.UF)
+            and self.isEdgeSolved(Edge.UL)
+            and self.isEdgeSolved(Edge.UB)
+            and self.isCornerSolved(Corner.URF)
+            and self.isCornerSolved(Corner.UFL)
+            and self.isCornerSolved(Corner.ULB)
+            and self.isCornerSolved(Corner.UBR)
+            and self.isEdgeSolved(Edge.FR)
+            and self.isEdgeSolved(Edge.FL)
+            and self.isEdgeSolved(Edge.BL)
+            and self.isEdgeSolved(Edge.BR)
+        ):
+            return True
+
+        else:
+            return False
+
     def printState(self):
 
         print("EDGES")

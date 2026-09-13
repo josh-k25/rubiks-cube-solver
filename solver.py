@@ -6,7 +6,7 @@ def checkWhiteCrossSolved(self):
     else:
         return False
 
-def solveWhiteCross(self, moves):
+def solveWhiteCross(self):
     
     #    is it already solved?
     #    yes → next corner
@@ -43,21 +43,21 @@ def solveWhiteCross(self, moves):
 
     # Then insert each staged edge into its solved U position
     for edge in WHITE_EDGES:
-        self = solveEdge(self, edge)
+        self = solveFirstLayerEdge(self, edge)
 
     return self
 
-def solveEdge(self, edge):
+def solveFirstLayerEdge(self, edge):
 
     # target D-layer position and insertion move for each white edge to solve
-    EDGE_SOLVE_DATA = {
+    FIRST_EDGE_SOLVE_DATA = {
         Edge.UF: (Edge.DF, Move.F2),
         Edge.UR: (Edge.DR, Move.R2),
         Edge.UB: (Edge.DB, Move.B2),
         Edge.UL: (Edge.DL, Move.L2)
     }
 
-    targetPosition, solveMove = EDGE_SOLVE_DATA[edge]
+    targetPosition, solveMove = FIRST_EDGE_SOLVE_DATA[edge]
 
     # While true is an infinite loop; use break to leave the loop
     # Keep rotating D until the target edge is underneath
@@ -178,7 +178,7 @@ def stageEdge(self, edge):
             # Re-check resulting state
             continue
 
-def solveCorner(self, corner):
+def solveFirstLayerCorner(self, corner):
 
     WHITE_CORNERS = (
         Corner.URF,
@@ -303,7 +303,81 @@ def solveWhiteCorners(self):
             continue
 
         self = stageCorner(self, corner)
-        self = solveCorner(self, corner)
+        self = solveFirstLayerCorner(self, corner)
+
+    return self
+
+def solveFirstLayer(self):
+
+    newState = solveWhiteCross(self)
+
+    newState = solveWhiteCorners(newState)
+
+    return newState
+
+def solveSecondLayer(self):
+
+    #define middle edges (cubies that need to be solved for second layer)
+    MIDDLE_EDGES = (
+        Edge.FL,
+        Edge.FR,
+        Edge.BR,
+        Edge.BL
+    )
+
+    #current middle-layer position : ejection sequence
+    SECOND_EDGE_EJECTION_MOVES = {
+        Edge.FL: (Move.D, Move.L, Move.D_PRIME, Move.L_PRIME, Move.D_PRIME, Move.F_PRIME, Move.D, Move.F),
+
+        Edge.FR: (Move.D_PRIME, Move.R_PRIME, Move.D, Move.R, Move.D, Move.F, Move.D_PRIME, Move.F_PRIME),
+
+        Edge.BL: (Move.D_PRIME, Move.L_PRIME, Move.D, Move.L, Move.D, Move.B, Move.D_PRIME, Move.B_PRIME),
+
+        Edge.BR: (Move.D, Move.R, Move.D_PRIME, Move.R_PRIME, Move.D_PRIME, Move.B_PRIME, Move.D, Move.B)
+    }
+
+    #solve data depending on cubie orientation
+    #get depending on cubie being solved and its orientation, use specific target cubie location and set moves
+    SECOND_EDGE_SOLVE_DATA = {
+    (Edge.FL, 1): (Edge.DF, (Move.D, Move.L, Move.D_PRIME, Move.L_PRIME, Move.D_PRIME, Move.F_PRIME, Move.D, Move.F)),
+    (Edge.FL, 0): (Edge.DB, (Move.F_PRIME, Move.D_PRIME, Move.F, Move.D, Move.L, Move.D, Move.L_PRIME, Move.D_PRIME)),
+
+    (Edge.FR, 1): (Edge.DF, (Move.D_PRIME, Move.R_PRIME, Move.D, Move.R, Move.D, Move.F, Move.D_PRIME, Move.F_PRIME)),
+    (Edge.FR, 0): (Edge.DB, (Move.F, Move.D, Move.F_PRIME, Move.D_PRIME, Move.R_PRIME, Move.D_PRIME, Move.R, Move.D)),
+
+    (Edge.BL, 1): (Edge.DB, (Move.D_PRIME, Move.L_PRIME, Move.D, Move.L, Move.D, Move.B, Move.D_PRIME, Move.B_PRIME)),
+    (Edge.BL, 0): (Edge.DF, (Move.B, Move.D, Move.B_PRIME, Move.D_PRIME, Move.L_PRIME, Move.D_PRIME, Move.L, Move.D)),
+
+    (Edge.BR, 1): (Edge.DB, (Move.D, Move.R, Move.D_PRIME, Move.R_PRIME, Move.D_PRIME, Move.B_PRIME, Move.D, Move.B)),
+    (Edge.BR, 0): (Edge.DF, (Move.B_PRIME, Move.D_PRIME, Move.B, Move.D, Move.R, Move.D, Move.R_PRIME, Move.D_PRIME))
+}
+    for edge in MIDDLE_EDGES:
+
+        #if its alreadt solved move on
+        if self.isEdgeSolved(edge):
+            continue
+
+        position, orientation = self.getEdgeData(edge)
+
+        #if cubie in edge position that is not correct eject it into the D layer
+        if position in (Edge.FL, Edge.FR, Edge.BL, Edge.BR):
+            ejectionMoves = SECOND_EDGE_EJECTION_MOVES[position]
+            self = self.applyMoves(ejectionMoves)
+            position, orientation = self.getEdgeData(edge)
+
+        assert position in (Edge.DF, Edge.DR, Edge.DL, Edge.DB)
+
+        position, orientation = self.getEdgeData(edge)
+        targetPosition, moves = SECOND_EDGE_SOLVE_DATA[(edge, orientation)]
+
+        # orientation should be fixed here
+        while position != targetPosition:
+            self = self.applyMove(Move.D)
+            position, orientation = self.getEdgeData(edge)
+
+        self = self.applyMoves(moves)
+
+        position, orientation = self.getEdgeData(edge)
 
     return self
 
