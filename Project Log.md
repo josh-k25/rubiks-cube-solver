@@ -236,3 +236,93 @@
 - Repeat testing for UFL, ULB, and UBR.
 - Build `solveWhiteCorners()` to coordinate all four corners.     
 - Verify the complete first layer before beginning second-layer edges.
+
+## 2026-09-13
+
+### Worked on
+
+- Finished debugging the underlying cube-state move engine.
+- Fixed `applyMove()` so:
+  - The requested move is actually used.
+  - Prime and double moves are implemented as repeated quarter turns.
+  - Each repeated turn operates on the result of the previous turn.
+  - A fresh cube state is created for each permutation so source values are not overwritten while calculating the destination state.
+- Fixed `getEdgeData()` and `getCornerData()` so orientation is retrieved from the cubie's current position.
+- Finished the full first-layer Layer-by-Layer solver.
+- Created `solveFirstLayer()` to combine:
+  - White-cross solving.
+  - White-corner solving.
+- Completed white-cross solving using:
+  - `stageEdge()`
+  - `solveFirstLayerEdge()`
+  - `solveWhiteCross()`
+- Completed first-layer corner solving using:
+  - `stageCorner()`
+  - `solveFirstLayerCorner()`
+  - `solveWhiteCorners()`
+- Added `isFirstLayerSolved()` to verify that all four U-layer edges and all four U-layer corners are solved.
+- Tested the first-layer solver using randomized scrambles.
+
+- Started and completed the second-layer edge solver.
+- Defined the four second-layer target edges:
+  - FL
+  - FR
+  - BL
+  - BR
+- Created middle-layer ejection sequences so an incorrectly placed target edge can first be moved onto the D layer.
+- Initially tried solving second-layer edges by forcing every D-layer edge into orientation 1 before insertion.
+- Created a separate `D_EDGE_FLIP_DATA` approach for flipping D-layer edges.
+- Discovered through testing that these flip sequences could solve the current target while destroying previously solved second-layer edges.
+- Debugged the problem by printing each target edge's:
+  - Position.
+  - Orientation.
+  - Solved status.
+- Traced failures where a later edge insertion displaced an edge that had already been solved.
+- Removed the separate edge-flipping approach.
+- Redesigned second-layer solving around all eight `(edge, orientation)` cases:
+  - FL,0
+  - FL,1
+  - FR,0
+  - FR,1
+  - BL,0
+  - BL,1
+  - BR,0
+  - BR,1
+- Created `SECOND_EDGE_SOLVE_DATA` where each `(edge, orientation)` maps directly to:
+  - The required D-layer setup position.
+  - The corresponding insertion sequence.
+- Finished `solveSecondLayer()`:
+  - Skip edges that are already solved.
+  - Eject incorrectly placed middle-layer edges to D.
+  - Read the target edge's position and orientation.
+  - Select the correct setup case from the lookup table.
+  - Rotate D until the edge reaches the required setup position.
+  - Apply the insertion sequence.
+- Added `isSecondLayerSolved()` to verify:
+  - The entire first layer remains solved.
+  - FL, FR, BL, and BR are all solved.
+- Successfully got both the first-layer and second-layer solvers working.
+
+### Learned
+
+- A cube move is fundamentally a permutation plus orientation changes.
+- `list.index()` returns the current position of a cubie, but returns a normal Python integer even when the list contains `IntEnum` members.
+- Cubie orientation is stored by position, so after finding a cubie's current position, orientation must be read using that position.
+- Position plus orientation is enough to determine which second-layer insertion case should be used.
+- Setup states for algorithms can be derived by working backward from the solved state:
+  - Start with a solved piece.
+  - Reverse the insertion sequence.
+  - Observe the resulting `(position, orientation)`.
+  - Use that state as the required forward setup condition.
+
+### Problems
+
+- The initial second-layer design assumed every target edge should have orientation 1 before insertion.
+- Debugging required distinguishing between:
+  - The current edge being solved correctly.
+  - The entire previously solved portion of the cube remaining intact.
+- Long move sequences are difficult to trust visually and need to be verified against the cubie model.
+
+### Next
+
+- Create final Layer solver
