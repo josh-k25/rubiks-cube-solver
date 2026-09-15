@@ -114,5 +114,5 @@ def main():
     print("\nALL 1000 FULL-CUBE TESTS PASSED!")
 
 
-if __name__ == "__test_Solver__":
+if __name__ == "__main__":
     main()
