@@ -4,43 +4,6 @@ A Rubik's Cube solver built from scratch using a **cubie-based representation** 
 
 The current implementation is written in Python and models the cube using edge/corner permutations and orientations rather than a sticker-based representation. It supports all 18 standard face moves, solves a scrambled cube through a custom LBL controller, records the generated solution, and independently replays that solution to verify correctness.
 
-The long-term goal of this project is to use the Python implementation as a **golden reference model** for a hardware Rubik's Cube solver implemented in RTL and eventually deployed on an FPGA.
-
----
-
-## Current Status
-
-### Python Solver
-
-- [x] Cubie-based cube representation
-- [x] Edge permutation tracking
-- [x] Edge orientation tracking
-- [x] Corner permutation tracking
-- [x] Corner orientation tracking
-- [x] All 6 base quarter-turn moves
-- [x] All 18 standard Rubik's Cube moves
-- [x] First-layer solver
-- [x] Second-layer solver
-- [x] Third-layer solver
-- [x] Complete Layer-by-Layer solve
-- [x] Move-history generation
-- [x] Full solved-state verification
-- [x] Independent solution replay verification
-- [x] Randomized end-to-end testing
-
-### Future Hardware Work
-
-- [ ] Define hardware-friendly cube-state encoding
-- [ ] Port move engine to RTL
-- [ ] Implement LBL controller as hardware FSMs
-- [ ] Simulate RTL against the Python golden model
-- [ ] Add UART communication between a host computer and FPGA
-- [ ] Run the solver on an FPGA
-- [ ] Compare software and hardware execution
-- [ ] Investigate more advanced solving algorithms
-
----
-
 ## Motivation
 
 This project started as an exploration of how a Rubik's Cube can be represented and solved computationally without relying on a conventional sticker matrix.
@@ -64,8 +27,6 @@ The resulting software architecture has several similarities to a hardware contr
 6. Repeat until the current phase is complete
 
 This makes the Python solver useful not only as a working solver, but also as a behavioral reference for the planned RTL implementation.
-
----
 
 # Architecture
 
@@ -98,8 +59,6 @@ The cube model handles the mechanics of the Rubik's Cube.
 The solver only makes decisions based on the current state and uses the cube model to execute moves.
 
 This separation keeps the cube mechanics independent from the solving strategy.
-
----
 
 # Cubie Representation
 
@@ -165,8 +124,6 @@ edgeOrientation[DF] = 1
 ```
 
 means the physical `BR` cubie currently occupies the `DF` position with orientation `1`.
-
----
 
 ## Corners
 
@@ -248,8 +205,6 @@ Move.R       -> (Move.R, 1)
 Move.R2      -> (Move.R, 2)
 Move.R_PRIME -> (Move.R, 3)
 ```
-
----
 
 # Move Tables
 
@@ -468,8 +423,6 @@ Apply insertion
 ```
 
 This allows each edge to be inserted without explicitly representing stickers.
-
----
 
 # Third Layer
 
