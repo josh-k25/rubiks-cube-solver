@@ -1,0 +1,1115 @@
+# Rubik's Cube Solver
+
+A Rubik's Cube solver built from scratch using a **cubie-based representation** and a **Layer-by-Layer (LBL)** solving algorithm.
+
+The current implementation is written in Python and models the cube using edge/corner permutations and orientations rather than a sticker-based representation. It supports all 18 standard face moves, solves a scrambled cube through a custom LBL controller, records the generated solution, and independently replays that solution to verify correctness.
+
+The long-term goal of this project is to use the Python implementation as a **golden reference model** for a hardware Rubik's Cube solver implemented in RTL and eventually deployed on an FPGA.
+
+---
+
+## Current Status
+
+### Python Solver
+
+- [x] Cubie-based cube representation
+- [x] Edge permutation tracking
+- [x] Edge orientation tracking
+- [x] Corner permutation tracking
+- [x] Corner orientation tracking
+- [x] All 6 base quarter-turn moves
+- [x] All 18 standard Rubik's Cube moves
+- [x] First-layer solver
+- [x] Second-layer solver
+- [x] Third-layer solver
+- [x] Complete Layer-by-Layer solve
+- [x] Move-history generation
+- [x] Full solved-state verification
+- [x] Independent solution replay verification
+- [x] Randomized end-to-end testing
+
+### Future Hardware Work
+
+- [ ] Define hardware-friendly cube-state encoding
+- [ ] Port move engine to RTL
+- [ ] Implement LBL controller as hardware FSMs
+- [ ] Simulate RTL against the Python golden model
+- [ ] Add UART communication between a host computer and FPGA
+- [ ] Run the solver on an FPGA
+- [ ] Compare software and hardware execution
+- [ ] Investigate more advanced solving algorithms
+
+---
+
+## Motivation
+
+This project started as an exploration of how a Rubik's Cube can be represented and solved computationally without relying on a conventional sticker matrix.
+
+Instead, the cube is represented at the **cubie level**:
+
+- Which edge or corner occupies each physical position
+- How that cubie is oriented
+
+This representation maps naturally to permutation-based algorithms and is also attractive for a future hardware implementation because the state is compact and structured.
+
+Rather than immediately implementing an existing solver, the initial goal was to understand the mechanics of the cube and build the control logic incrementally.
+
+The resulting software architecture has several similarities to a hardware controller:
+
+1. Inspect the current cube state
+2. Classify the current case
+3. Select an operation or move sequence
+4. Apply the operation
+5. Inspect the new state
+6. Repeat until the current phase is complete
+
+This makes the Python solver useful not only as a working solver, but also as a behavioral reference for the planned RTL implementation.
+
+---
+
+# Architecture
+
+The project is divided into two main parts:
+
+```text
+Cube Model
+    |
+    |-- Cubie representation
+    |-- Move tables
+    |-- Move application
+    |-- State queries
+    |
+    v
+Solver
+    |
+    |-- First Layer
+    |-- Second Layer
+    |-- Third Layer
+    |
+    v
+Move History
+    |
+    v
+Replay Verification
+```
+
+The cube model handles the mechanics of the Rubik's Cube.
+
+The solver only makes decisions based on the current state and uses the cube model to execute moves.
+
+This separation keeps the cube mechanics independent from the solving strategy.
+
+---
+
+# Cubie Representation
+
+The cube is represented using:
+
+- 12 edge positions
+- 8 corner positions
+- Edge orientation
+- Corner orientation
+
+No explicit sticker array is required.
+
+## Edges
+
+The twelve edge cubies are:
+
+```text
+UR  UF  UL  UB
+DR  DF  DL  DB
+FR  FL  BL  BR
+```
+
+They are represented with a Python `IntEnum`:
+
+```python
+class Edge(IntEnum):
+    UR = 0
+    UF = 1
+    UL = 2
+    UB = 3
+
+    DR = 4
+    DF = 5
+    DL = 6
+    DB = 7
+
+    FR = 8
+    FL = 9
+    BL = 10
+    BR = 11
+```
+
+The edge state contains two arrays:
+
+```python
+edgePosition
+edgeOrientation
+```
+
+`edgePosition[position]` answers:
+
+> Which physical edge cubie currently occupies this position?
+
+`edgeOrientation[position]` answers:
+
+> What is the orientation of the edge currently occupying this position?
+
+For example:
+
+```text
+edgePosition[DF] = BR
+edgeOrientation[DF] = 1
+```
+
+means the physical `BR` cubie currently occupies the `DF` position with orientation `1`.
+
+---
+
+## Corners
+
+The eight corner cubies are:
+
+```text
+URF
+UFL
+ULB
+UBR
+
+DFR
+DLF
+DBL
+DRB
+```
+
+Each corner has an orientation:
+
+```text
+0
+1
+2
+```
+
+The corner state is stored using:
+
+```python
+cornerPosition
+cornerOrientation
+```
+
+As with the edges, orientation is associated with the **current position**, not with the cubie's solved location.
+
+---
+
+# Move Representation
+
+The solver supports all 18 standard moves:
+
+```text
+U   U2   U'
+R   R2   R'
+F   F2   F'
+D   D2   D'
+L   L2   L'
+B   B2   B'
+```
+
+Internally, only the six clockwise quarter turns need independent permutation tables:
+
+```text
+U
+R
+F
+D
+L
+B
+```
+
+Prime and double moves are generated by repeating those base moves:
+
+```text
+R  = R once
+R2 = R twice
+R' = R three times
+```
+
+The move definition table therefore maps each requested move to:
+
+```text
+(base move, number of quarter turns)
+```
+
+For example:
+
+```python
+Move.R       -> (Move.R, 1)
+Move.R2      -> (Move.R, 2)
+Move.R_PRIME -> (Move.R, 3)
+```
+
+---
+
+# Move Tables
+
+Each base move is described as a permutation.
+
+The convention used is:
+
+```text
+mapping[destination] = source
+```
+
+This means each destination position specifies which old position supplies its cubie.
+
+For every move, the model stores:
+
+```text
+edge permutation
+edge orientation changes
+corner permutation
+corner orientation changes
+```
+
+A move therefore consists of:
+
+```text
+old cube state
+      |
+      v
+permutation table
++
+orientation delta
+      |
+      v
+new cube state
+```
+
+A fresh cube state is created for every quarter turn so values from the original state cannot be overwritten while the permutation is being calculated.
+
+---
+
+# Layer-by-Layer Solver
+
+The current solver uses a custom **Layer-by-Layer** approach.
+
+White is treated as the `U` face and yellow as the `D` face.
+
+The solver is divided into:
+
+```text
+First Layer
+    |
+Second Layer
+    |
+Third Layer
+    |
+Solved Cube
+```
+
+---
+
+# First Layer
+
+The first layer consists of:
+
+1. White cross
+2. White corners
+
+## White Cross
+
+The four white edges are:
+
+```text
+UF
+UR
+UB
+UL
+```
+
+The cross solver uses two phases.
+
+### 1. Stage the white edges
+
+Each white edge is moved to the D layer with the required orientation.
+
+```text
+arbitrary state
+      |
+      v
+D-layer staging
+```
+
+Multiple initial states are deliberately normalized into a smaller number of predictable intermediate states.
+
+This reduces the number of cases the final insertion logic needs to handle.
+
+### 2. Insert the staged edges
+
+Each staged edge is rotated underneath its final U-layer position.
+
+It is then inserted using a half turn:
+
+```text
+UF <- F2
+UR <- R2
+UB <- B2
+UL <- L2
+```
+
+---
+
+## White Corners
+
+The four first-layer corners are:
+
+```text
+URF
+UFL
+ULB
+UBR
+```
+
+The solver first stages an unsolved corner onto the D layer.
+
+The corner is then aligned underneath its final U-layer destination:
+
+```text
+URF -> DFR
+UFL -> DLF
+ULB -> DBL
+UBR -> DRB
+```
+
+A corner-specific insertion sequence is repeated until both:
+
+```text
+position = correct
+orientation = 0
+```
+
+The completed white cross remains preserved while the corners are inserted.
+
+---
+
+# Second Layer
+
+The second layer consists of the four middle edges:
+
+```text
+FL
+FR
+BL
+BR
+```
+
+An early version of the solver attempted to force every target edge into the same orientation before insertion.
+
+That approach was abandoned because the reorientation sequences could disturb middle-layer edges that had already been solved.
+
+The final implementation instead treats both orientations as valid cases.
+
+For every target edge, the solver classifies:
+
+```text
+(edge identity, orientation)
+```
+
+There are therefore eight insertion cases:
+
+```text
+FL,0
+FL,1
+
+FR,0
+FR,1
+
+BL,0
+BL,1
+
+BR,0
+BR,1
+```
+
+Each case maps to:
+
+```text
+required D-layer setup position
++
+insertion sequence
+```
+
+The control flow is:
+
+```text
+Target already solved?
+        |
+        +-- yes --> next edge
+        |
+        no
+        |
+        v
+Target currently in middle layer?
+        |
+        +-- yes --> eject to D
+        |
+        v
+Read position + orientation
+        |
+        v
+Lookup required setup
+        |
+        v
+Rotate D to setup position
+        |
+        v
+Apply insertion
+```
+
+This allows each edge to be inserted without explicitly representing stickers.
+
+---
+
+# Third Layer
+
+The third layer is divided into four phases:
+
+```text
+1. Orient yellow edges
+2. Permute yellow edges
+3. Position yellow corners
+4. Orient yellow corners
+```
+
+---
+
+## Yellow Cross Orientation
+
+The yellow face is the D face.
+
+To detect the yellow-cross pattern, cubie identities do not matter.
+
+Only the orientation values at these physical positions are inspected:
+
+```text
+DF
+DR
+DB
+DL
+```
+
+The pattern is classified as:
+
+```text
+0 oriented edges
+    -> dot
+
+2 adjacent oriented edges
+    -> L
+
+2 opposite oriented edges
+    -> line
+
+4 oriented edges
+    -> cross
+```
+
+The solver detects the pattern, selects the corresponding move sequence, applies it, and then re-evaluates the cube.
+
+This continues until:
+
+```text
+DF orientation = 0
+DR orientation = 0
+DB orientation = 0
+DL orientation = 0
+```
+
+---
+
+## Yellow Edge Permutation
+
+Once the yellow cross exists, orientation is complete.
+
+The next goal is to move the four yellow edges into their final physical locations.
+
+At this stage the solver can use:
+
+```python
+isEdgeSolved()
+```
+
+because both cubie identity and position now matter.
+
+The solver checks the four possible D-layer alignments and determines whether:
+
+```text
+4 edges match
+2 adjacent edges match
+2 opposite edges match
+```
+
+The appropriate edge-permutation algorithm is applied and the state is checked again.
+
+The process repeats until all four yellow edges are solved.
+
+---
+
+## Yellow Corner Positioning
+
+Corner permutation is handled separately from corner orientation.
+
+A corner counts as correctly positioned when:
+
+```python
+cornerPosition[position] == position
+```
+
+even if its orientation is still `1` or `2`.
+
+Possible states are classified by how many corners are already in their proper positions.
+
+```text
+4 positioned
+    -> finished
+
+1 positioned
+    -> keep that corner fixed
+       cycle the remaining three
+
+0 positioned
+    -> apply a three-corner cycle
+       re-evaluate
+```
+
+A lookup table contains rotated versions of the three-corner permutation algorithm so whichever corner is already positioned correctly can remain fixed.
+
+---
+
+## Yellow Corner Orientation
+
+Once all four corner cubies occupy their correct locations, the final step is to twist them.
+
+`DFR` is used as the working position.
+
+For each yellow corner:
+
+```text
+bring corner to DFR
+      |
+      v
+repeat corner-twist trigger
+      |
+      v
+corner orientation = 0
+      |
+      v
+rotate D to next corner
+```
+
+This process continues for all four corners.
+
+After the final corner is oriented, the cube returns to the solved state.
+
+---
+
+# High-Level Solver
+
+The entire solver is organized hierarchically:
+
+```text
+solveFirstLayer()
+    |
+    +-- solveWhiteCross()
+    +-- solveWhiteCorners()
+
+
+solveSecondLayer()
+    |
+    +-- solve four middle edges
+
+
+solveThirdLayer()
+    |
+    +-- solveYellowCross()
+    +-- solveYellowCrossEdges()
+    +-- positionYellowCorners()
+    +-- orientYellowCorners()
+```
+
+A complete solve is therefore:
+
+```python
+cube = solveFirstLayer(cube)
+cube = solveSecondLayer(cube)
+cube = solveThirdLayer(cube)
+```
+
+---
+
+# Move History
+
+Every move generated by the solver is recorded.
+
+The move history contains operations such as:
+
+```text
+F
+R_PRIME
+D
+R2
+L
+...
+```
+
+Double and prime moves remain represented as single logical moves in the history rather than being expanded into repeated quarter turns.
+
+For example:
+
+```text
+R2
+```
+
+counts as one recorded solver instruction.
+
+The history can be displayed using:
+
+```python
+print(
+    " ".join(move.name for move in cube.moveHistory)
+)
+```
+
+and the solution length can be measured with:
+
+```python
+len(cube.moveHistory)
+```
+
+---
+
+# Solution Replay Verification
+
+The project includes an independent solution verification step.
+
+Simply checking the cube state returned directly by the solver is not enough to prove that the recorded sequence itself is valid.
+
+The test therefore performs:
+
+```text
+Fresh solved cube
+       |
+       v
+Apply original scramble
+       |
+       v
+Apply recorded solution
+       |
+       v
+Check all 12 edges
+and all 8 corners
+       |
+       v
+Solved
+```
+
+In pseudocode:
+
+```python
+verificationCube = cubeState()
+
+verificationCube = verificationCube.applyMoves(scramble)
+
+verificationCube = verificationCube.applyMoves(solutionMoves)
+
+assert all edges solved
+assert all corners solved
+```
+
+This independently verifies that the generated move list reproduces the solution.
+
+---
+
+# Testing
+
+The solver is tested using randomized scrambles.
+
+A test performs:
+
+```text
+Generate scramble
+      |
+      v
+Apply scramble
+      |
+      v
+Solve first layer
+      |
+      v
+assert first layer solved
+      |
+      v
+Solve second layer
+      |
+      v
+assert first + second layers solved
+      |
+      v
+Solve third layer
+      |
+      v
+assert entire cube solved
+      |
+      v
+Save generated solution
+      |
+      v
+Create fresh cube
+      |
+      v
+Replay scramble
+      |
+      v
+Replay solution
+      |
+      v
+assert entire cube solved
+```
+
+A recent end-to-end test run used:
+
+```text
+5 independent test cases
+1000 randomly selected moves per scramble
+```
+
+All five tests successfully:
+
+```text
+passed first-layer verification
+passed second-layer verification
+passed full-cube verification
+passed independent solution replay verification
+```
+
+Example solution lengths from that test run were:
+
+```text
+179 moves
+195 moves
+194 moves
+203 moves
+179 moves
+```
+
+The current solver prioritizes **correctness and architecture** rather than move optimality.
+
+---
+
+# Example Output
+
+Example:
+
+```text
+After scramble:
+White cross solved: False
+First layer solved: False
+
+After first layer:
+First layer solved: True
+
+After second layer:
+First layer still solved: True
+Second layer solved: True
+
+After third layer:
+Cube solved: True
+
+Solution move count: 179
+Solution replay solved cube: True
+
+TEST PASSED
+```
+
+---
+
+# Project Structure
+
+The core project currently consists of:
+
+```text
+rubiks-cube-solver/
+|
+|-- cube.py
+|     Cube representation
+|     Cubie enums
+|     Move definitions
+|     Permutation/orientation tables
+|     Move application
+|     State-query helpers
+|
+|-- solver.py
+|     First-layer solver
+|     Second-layer solver
+|     Third-layer solver
+|
+|-- main.py
+|     Random scramble generation
+|     End-to-end testing
+|     Solution verification
+|
+|-- README.md
+|
+|-- PROJECT_LOG.md
+      Development notes and lessons learned
+```
+
+If the project log currently has a different filename, update the final entry above to match it.
+
+---
+
+# Running the Solver
+
+The project requires Python 3.
+
+Clone the repository:
+
+```bash
+git clone <repository-url>
+cd rubiks-cube-solver
+```
+
+Run:
+
+```bash
+python main.py
+```
+
+The test program will:
+
+1. Generate a random scramble
+2. Apply the scramble
+3. Solve the cube
+4. Print the generated solution
+5. Verify the final state
+6. Replay the generated solution on a fresh cube
+7. Verify the replayed solution
+
+---
+
+# Design Decisions
+
+## Why cubies instead of stickers?
+
+A sticker representation is intuitive for visualization but contains more state than the solver actually needs.
+
+The cubie representation directly describes:
+
+```text
+permutation
++
+orientation
+```
+
+which are the two properties changed by Rubik's Cube moves.
+
+It also maps more naturally to a future hardware implementation.
+
+---
+
+## Why Layer-by-Layer?
+
+Layer-by-Layer was chosen as the first solving algorithm because:
+
+- The algorithm is easy to reason about incrementally.
+- Individual stages can be independently tested.
+- Each stage can be modeled as a controller/state machine.
+- Correctness can be established before optimization.
+- It provides a manageable path toward an RTL implementation.
+
+This solver is therefore not intended to minimize move count.
+
+Its purpose is to provide a correct, understandable, and hardware-friendly baseline.
+
+---
+
+## Why lookup tables?
+
+Many solver decisions are deterministic.
+
+For example:
+
+```text
+target cubie
++
+current orientation
+=
+known setup position
++
+known insertion sequence
+```
+
+Representing these relationships as lookup tables keeps the solver controller simpler and makes the decision logic explicit.
+
+This also has a natural analogue in hardware through case statements, ROMs, or combinational decode logic.
+
+---
+
+# Verification Philosophy
+
+The project uses several levels of verification.
+
+### Move-level verification
+
+Four identical quarter turns should return the cube to its original state:
+
+```text
+R^4 = identity
+F^4 = identity
+...
+```
+
+### Stage-level verification
+
+After each solving phase:
+
+```text
+First layer
+    -> verify first layer
+
+Second layer
+    -> verify first + second layers
+
+Third layer
+    -> verify entire cube
+```
+
+### Solution-level verification
+
+The generated solution is independently replayed from the original scramble.
+
+This provides an additional check that the recorded move sequence itself is correct.
+
+---
+
+# Limitations
+
+The current implementation is intentionally a first complete solver rather than an optimized solver.
+
+Current limitations include:
+
+- Layer-by-Layer solutions are relatively long.
+- No move-sequence optimization is currently performed.
+- No graphical cube visualization.
+- No physical cube input yet.
+- No hardware implementation yet.
+- No search-based solving algorithm yet.
+- No attempt to approach God's Number.
+
+These are potential future extensions rather than requirements for the current milestone.
+
+---
+
+# Roadmap
+
+## Phase 1 — Python Cube Model
+
+- [x] Cubie representation
+- [x] Move engine
+- [x] Orientation tracking
+- [x] State helpers
+- [x] Move validation
+
+## Phase 2 — Python Layer-by-Layer Solver
+
+- [x] White cross
+- [x] White corners
+- [x] Second layer
+- [x] Yellow cross
+- [x] Yellow edge permutation
+- [x] Yellow corner permutation
+- [x] Yellow corner orientation
+- [x] Complete cube solve
+
+## Phase 3 — Verification
+
+- [x] Randomized scrambles
+- [x] Stage assertions
+- [x] Full solved-state verification
+- [x] Move history
+- [x] Solution replay
+
+## Phase 4 — RTL Solver
+
+- [ ] Define hardware state representation
+- [ ] Implement move engine in RTL
+- [ ] Build solver controller/FSM
+- [ ] Verify RTL against Python model
+- [ ] Synthesize design
+
+## Phase 5 — FPGA System
+
+- [ ] Deploy to FPGA
+- [ ] Add UART communication
+- [ ] Send scrambled cube states from a host computer
+- [ ] Return generated move sequence
+- [ ] Measure hardware execution time
+
+## Possible Future Algorithms
+
+- [ ] Improved LBL move selection
+- [ ] IDA*
+- [ ] Pattern databases
+- [ ] Two-Phase / Kociemba-style solver
+- [ ] Hardware-accelerated search
+
+---
+
+# What I Learned
+
+This project has involved more than implementing a Rubik's Cube algorithm.
+
+Some of the main concepts explored include:
+
+- Permutations
+- Modular orientation arithmetic
+- State representation
+- Python enums
+- Lookup tables
+- State-machine-style control flow
+- Algorithm decomposition
+- Invariants
+- Randomized testing
+- Regression testing
+- Golden reference models
+- Independent output verification
+- Designing software with a future RTL implementation in mind
+
+One of the most important architectural ideas was repeatedly separating different problems:
+
+```text
+cubie identity vs physical position
+
+position vs orientation
+
+orientation vs permutation
+
+cube mechanics vs solver policy
+
+solving a target piece vs preserving previous progress
+
+internal final state vs reproducible solution sequence
+```
+
+Those distinctions made the solver significantly easier to reason about and debug.
+
+---
+
+# Future Goal
+
+The Python solver is intended to become the **golden behavioral model** for the next phase of the project.
+
+The next major goal is to implement the same solving process in RTL, verify it against the Python model, and eventually run it on an FPGA.
+
+The final system is intended to take a scrambled Rubik's Cube state as input and return a valid move sequence using dedicated hardware.
