@@ -368,18 +368,6 @@
 
 - Test complete third layer solver with already completed first and second
 
-
-- Add a complete solved-cube check covering all:
-  - 12 edges.
-  - 8 corners.
-
-- Run randomized full-cube tests.
-
-- Add move-history recording so the solver outputs an actual reproducible solution sequence.
-
-- Verify the recorded solution by replaying it on the original scramble.
-
-
 - Add a complete solved-cube check covering all:
   - 12 edges.
   - 8 corners.

@@ -876,7 +876,7 @@ The project requires Python 3.
 Clone the repository:
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/josh-k25 rubiks-cube-solver.git
 cd rubiks-cube-solver
 ```
 
