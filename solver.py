@@ -381,3 +381,359 @@ def solveSecondLayer(self):
 
     return self
 
+def solveThirdLayer(self):
+
+    self = solveYellowCross(self)
+
+    self = solveYellowCrossEdges(self)
+
+    self = positionYellowCorners(self)
+
+    self = orientYellowCorners(self)
+
+    return self
+    
+
+def solveYellowCross(self):
+
+    yellowDotMoves = (
+        Move.F_PRIME,
+        Move.R_PRIME,
+        Move.D_PRIME,
+        Move.R,
+        Move.D,
+        Move.F
+        )
+
+    YELLOW_LINE_MOVES = {
+
+        # Line already in required orientation: DL + DR
+        (Edge.DL, Edge.DR): (
+            Move.F_PRIME,
+            Move.R_PRIME,
+            Move.D_PRIME,
+            Move.R,
+            Move.D,
+            Move.F
+        ),
+
+        # Rotate DF + DB line into DL + DR first
+        (Edge.DF, Edge.DB): (
+            Move.D,
+            Move.F_PRIME,
+            Move.R_PRIME,
+            Move.D_PRIME,
+            Move.R,
+            Move.D,
+            Move.F
+        )
+    }
+
+    YELLOW_L_MOVES = {
+
+        # L already in required orientation: DR + DF
+        (Edge.DR, Edge.DF): (
+            Move.F_PRIME,
+            Move.R_PRIME,
+            Move.D_PRIME,
+            Move.R,
+            Move.D,
+            Move.F
+        ),
+
+        # Rotate DB + DR into DR + DF
+        (Edge.DB, Edge.DR): (
+            Move.D_PRIME,
+            Move.F_PRIME,
+            Move.R_PRIME,
+            Move.D_PRIME,
+            Move.R,
+            Move.D,
+            Move.F
+        ),
+
+        # Rotate DL + DB into DR + DF
+        (Edge.DL, Edge.DB): (
+            Move.D2,
+            Move.F_PRIME,
+            Move.R_PRIME,
+            Move.D_PRIME,
+            Move.R,
+            Move.D,
+            Move.F
+        ),
+
+        # Rotate DF + DL into DR + DF
+        (Edge.DF, Edge.DL): (
+            Move.D,
+            Move.F_PRIME,
+            Move.R_PRIME,
+            Move.D_PRIME,
+            Move.R,
+            Move.D,
+            Move.F
+        )
+    }
+
+    while not self.yellowCrossSolved():
+
+        lineEdges = self.yellowLineEdges()
+
+        #if yellow line was detected it will return edges and corresponding moves will executee
+        if lineEdges is not None:
+            moves = YELLOW_LINE_MOVES[lineEdges]
+            self = self.applyMoves(moves)
+            continue
+
+        lEdges = self.yellowLEdges()
+
+        #if yellow l was detected it will return edges and corresponding moves will executee
+        if lEdges is not None:
+            moves = YELLOW_L_MOVES[lEdges]
+            self = self.applyMoves(moves)
+            continue
+
+        # no cross, line, or L -> dot
+        self = self.applyMoves(yellowDotMoves)
+
+    return self
+
+def solveYellowCrossEdges(self):
+
+    YELLOW_EDGES = (
+        Edge.DF,
+        Edge.DR,
+        Edge.DB,
+        Edge.DL
+    )
+
+    #the two listed edges are already solved. the algorithm preserves those two and swaps the other two.
+    YELLOW_EDGE_PERMUTATION_MOVES = {
+
+        # DF + DR solved
+        (Edge.DF, Edge.DR): (
+            Move.F_PRIME,
+            Move.D_PRIME,
+            Move.F,
+            Move.D_PRIME,
+            Move.F_PRIME,
+            Move.D2,
+            Move.F,
+            Move.D_PRIME
+        ),
+
+        # DR + DB solved
+        (Edge.DR, Edge.DB): (
+            Move.R_PRIME,
+            Move.D_PRIME,
+            Move.R,
+            Move.D_PRIME,
+            Move.R_PRIME,
+            Move.D2,
+            Move.R,
+            Move.D_PRIME
+        ),
+
+        # DB + DL solved
+        (Edge.DB, Edge.DL): (
+            Move.B_PRIME,
+            Move.D_PRIME,
+            Move.B,
+            Move.D_PRIME,
+            Move.B_PRIME,
+            Move.D2,
+            Move.B,
+            Move.D_PRIME
+        ),
+
+        # DL + DF solved
+        (Edge.DF, Edge.DL): (
+            Move.L_PRIME,
+            Move.D_PRIME,
+            Move.L,
+            Move.D_PRIME,
+            Move.L_PRIME,
+            Move.D2,
+            Move.L,
+            Move.D_PRIME
+        )
+    }
+
+    # used when the only matched pair is opposit
+    oppositePairMoves = YELLOW_EDGE_PERMUTATION_MOVES[
+        (Edge.DF, Edge.DR)
+    ]
+
+    while True:
+
+        foundOppositePair = False
+
+        #check all 4 possible D-layer alignments
+        for _ in range(4):
+
+            solvedEdges = []
+
+            for edge in YELLOW_EDGES:
+                if self.isEdgeSolved(edge):
+                    solvedEdges.append(edge)
+
+            #all four yellow-cross edges are permuted correctly
+            if len(solvedEdges) == 4:
+                return self
+
+            #two edges match
+            if len(solvedEdges) == 2:
+
+                solvedPair = tuple(solvedEdges)
+
+                # adjacent pair
+                # use the algorithm for that exact pair
+                if solvedPair in YELLOW_EDGE_PERMUTATION_MOVES:
+
+                    moves = YELLOW_EDGE_PERMUTATION_MOVES[solvedPair]
+
+                    self = self.applyMoves(moves)
+
+                    # cube changed, so restart detection
+                    break
+
+                # the two solved edges are opposite
+                else:
+                    foundOppositePair = True
+
+            # try another D-layer alignment
+            self = self.applyMove(Move.D)
+
+        else:
+            # checked all four D rotations without finding an adjacent solved pair. This means we encountered the opposite-pair case.
+            if foundOppositePair:
+                self = self.applyMoves(oppositePairMoves)
+                continue
+
+            raise AssertionError("No valid yellow-edge permutation case found")
+
+def positionYellowCorners(self):
+
+    YELLOW_CORNERS = (
+        Corner.DFR,
+        Corner.DLF,
+        Corner.DBL,
+        Corner.DRB
+    )
+
+    CORNER_POSITION_MOVES = {
+
+        Corner.DFR: (
+            Move.D_PRIME,
+            Move.R_PRIME,
+            Move.D,
+            Move.L,
+            Move.D_PRIME,
+            Move.R,
+            Move.D,
+            Move.L_PRIME
+        ),
+
+        Corner.DLF: (
+            Move.D_PRIME,
+            Move.F_PRIME,
+            Move.D,
+            Move.B,
+            Move.D_PRIME,
+            Move.F,
+            Move.D,
+            Move.B_PRIME
+        ),
+
+        Corner.DBL: (
+            Move.D_PRIME,
+            Move.L_PRIME,
+            Move.D,
+            Move.R,
+            Move.D_PRIME,
+            Move.L,
+            Move.D,
+            Move.R_PRIME
+        ),
+
+        Corner.DRB: (
+            Move.D_PRIME,
+            Move.B_PRIME,
+            Move.D,
+            Move.F,
+            Move.D_PRIME,
+            Move.B,
+            Move.D,
+            Move.F_PRIME
+        )
+    }
+
+    while True:
+
+        positionedCorners = []
+
+        # only check position since rientation does not matter yet.
+        for corner in YELLOW_CORNERS:
+            if self.cornerPosition[corner] == corner:
+                positionedCorners.append(corner)
+
+        # all four corners are in their correct locations
+        if len(positionedCorners) == 4:
+            return self
+
+        #one corner is correctly positioned. keep it fixed and cycle the other three.
+        if len(positionedCorners) == 1:
+            fixedCorner = positionedCorners[0]
+
+            moves = CORNER_POSITION_MOVES[fixedCorner]
+
+            self = self.applyMoves(moves)
+
+            # re check the new state
+            continue
+
+        #apply any of the moves if none of them are positioned correctly
+        if len(positionedCorners) == 0:
+            self = self.applyMoves(
+                CORNER_POSITION_MOVES[Corner.DFR]
+            )
+
+            continue
+
+        # After yellow-edge permutation is complete,
+        # 2 or 3 correctly positioned corners should
+        # not be a valid case.
+        raise AssertionError(
+            f"Unexpected number of positioned yellow corners: "
+            f"{len(positionedCorners)}"
+        )
+
+def orientYellowCorners(self):
+
+    CORNER_TWIST_MOVES = (
+        Move.R,
+        Move.U,
+        Move.R_PRIME,
+        Move.U_PRIME
+    )
+
+    #process all four yellow corners
+    for _ in range(4):
+
+        # Remember which physical corner is currently
+        # in the working DFR position
+        targetCorner = self.cornerPosition[Corner.DFR]
+
+        # Keep applying the trigger until that same
+        # corner returns to DFR with orientation 0
+        while not (
+            self.cornerPosition[Corner.DFR] == targetCorner
+            and self.cornerOrientation[Corner.DFR] == 0
+        ):
+
+            self = self.applyMoves(CORNER_TWIST_MOVES)
+
+        # Bring the next yellow corner to DFR
+        self = self.applyMove(Move.D)
+
+    return self

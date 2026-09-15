@@ -228,9 +228,12 @@ class cubeState:
 
         self.cornerOrientation = list(SOLVED_CORNER_ORIENTATION)
 
+        self.moveHistory = []
 
     def applyMove(currentState, move):
     # select mapping/delta tables based on move
+
+        previousHistory = currentState.moveHistory.copy()
 
         baseMove, turns = MOVE_DEFINITIONS[move]
 
@@ -256,6 +259,8 @@ class cubeState:
 
             currentState = newState
 
+        newState.moveHistory = previousHistory + [move]
+        
         return newState
 
     def applyMoves(self, moves):
@@ -350,11 +355,62 @@ class cubeState:
 
         else:
             return False
+        
+    def yellowCrossSolved(self):
+        if (
+            self.edgeOrientation[Edge.DF] == 0
+            and self.edgeOrientation[Edge.DR] == 0
+            and self.edgeOrientation[Edge.DB] == 0
+            and self.edgeOrientation[Edge.DL] == 0
+        ):
+            return True
+        else:
+            return False
+
+    #check for l shape. dont have to worry about the line or cross being solved already since i will check for theem before runnign this function
+    def yellowLEdges(self):
+
+        if (
+            self.edgeOrientation[Edge.DF] == 0 and self.edgeOrientation[Edge.DR] == 0
+        ):
+            return (Edge.DR, Edge.DF)
+
+        elif (
+            self.edgeOrientation[Edge.DR] == 0 and self.edgeOrientation[Edge.DB] == 0
+        ):
+            return (Edge.DB, Edge.DR)
+
+        elif (
+            self.edgeOrientation[Edge.DB] == 0 and self.edgeOrientation[Edge.DL] == 0
+        ):
+            return (Edge.DL, Edge.DB)
+
+        elif (
+            self.edgeOrientation[Edge.DL] == 0 and self.edgeOrientation[Edge.DF] == 0
+        ):
+            return (Edge.DF, Edge.DL)
+
+        return None
+
+    #look for yellow line. dont have to worry about the cross since il run the cross before this 
+    def yellowLineEdges(self):
+        if (
+            self.edgeOrientation[Edge.DF] == 0 and self.edgeOrientation[Edge.DB] == 0
+        ):
+            return (Edge.DF, Edge.DB)
+        elif (
+            self.edgeOrientation[Edge.DL] == 0 and self.edgeOrientation[Edge.DR] == 0
+        ):
+            return (Edge.DL, Edge.DR)
+
+        return None
+        
+
+
 
     def printState(self):
 
         print("EDGES")
-        print("-----")
 
         for position in Edge:
             cubie = self.edgePosition[position]
@@ -368,7 +424,6 @@ class cubeState:
         print()
 
         print("CORNERS")
-        print("-------")
 
         for position in Corner:
             cubie = self.cornerPosition[position]

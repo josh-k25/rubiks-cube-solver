@@ -326,3 +326,91 @@
 ### Next
 
 - Create final Layer solver
+
+## 2026-09-14
+
+### Worked On
+
+- Started and finished the final layer of the LBl solver
+
+- Broke the third layer into four separate stages:
+  - Orient yellow edges to form the yellow cross.
+  - Permute the yellow-cross edges into their correct positions.
+  - Position the yellow corners.
+  - Orient the yellow corners.
+
+- Added yellow-cross pattern detection using only the cubie orientation representation rather than adding a facelet/sticker representation.
+- Created `yellowCrossSolved()` to check whether all four D-layer edges have orientation 0.
+- Created `yellowLineEdges()` to detect the two possible yellow-line orientations.
+- Created `yellowLEdges()` to detect the four possible yellow-L orientations.
+
+### Learned
+
+- Yellow patterns can be detected only with correct orientation:
+  - 0 oriented edges → dot.
+  - 2 adjacent oriented edges → L.
+  - 2 opposite oriented edges → line.
+  - 4 oriented edges → cross.
+
+  ### Problems
+
+- Initially mixed up the distinction between:
+  - whether a particular cubie is solved
+  - whether the edge currently occupying a particular D-layer position is oriented correctly.
+
+- Needed to adapt familiar yellow-up algorithms to the project's fixed orientation where yellow is on D.
+
+- Some third-layer algorithms had to be rotated or mirrored depending on which yellow pattern was detected.
+
+- `solveThirdLayer()` was initially only defining data and was not actually calling the individual third-layer solving stages.
+
+### Next
+
+- Test complete third layer solver with already completed first and second
+
+
+- Add a complete solved-cube check covering all:
+  - 12 edges.
+  - 8 corners.
+
+- Run randomized full-cube tests.
+
+- Add move-history recording so the solver outputs an actual reproducible solution sequence.
+
+- Verify the recorded solution by replaying it on the original scramble.
+
+
+- Add a complete solved-cube check covering all:
+  - 12 edges.
+  - 8 corners.
+
+- Run randomized full-cube tests.
+
+- Add move-history recording so the solver outputs an actual reproducible solution sequence.
+
+- Verify the recorded solution by replaying it on the original scramble.
+
+## 2026-09-15
+
+### Worked on
+
+- Added move-history tracking to the cube state.
+
+- Modified the move engine so every requested move used by the solver is recorded automatically.
+
+- Added independent replay verification:
+  - Create a fresh solved cube.
+  - Reapply the exact saved scramble.
+  - Apply the recorded solver move history.
+  - Check that the fresh cube reaches the solved state.
+
+- Ran 5 complete end-to-end tests.
+
+- Each test used a random 1000-move scramble.
+
+- All five tests successfully passed:
+  - First layer solved.
+  - Second layer solved while preserving the first.
+  - Third layer solved.
+  - Entire cube solved.
+  - Recorded solution replayed successfully on a fresh copy of the scramble.
