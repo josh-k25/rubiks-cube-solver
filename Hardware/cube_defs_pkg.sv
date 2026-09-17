@@ -28,6 +28,7 @@ typedef enum logic [2:0]{
     DRB = 3'd7
 } corner;
 
+//enums for all the 18 moves
 typedef enum logic [4:0]{
     U,
     U2,
@@ -45,13 +46,13 @@ typedef enum logic [4:0]{
     D2,
     D_PRIME,
 
-    L,
+    L,  
     L2,
     L_PRIME,
 
     B,
     B2,
     B_PRIME
-} moves;
+} move;
 
 endpackage
