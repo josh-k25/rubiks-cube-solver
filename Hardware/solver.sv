@@ -21,18 +21,54 @@ module solver(
     output logic move
 );
 
+logic [1:0] target_index;
+logic white_edges_staging_done;
+
 always_ff @(posedge clk) begin
-    if (solve_enable) begin
-        for (int i = 0; i < 4; i++) begin
-            if white_edges_staged[i] !== 0 begin
-                
+
+    if (reset) begin
+        target_index              <= 2'd0;
+        white_edges_staging_done  <= 1'b0;
+    end
+
+    else if (solve_enable) begin
+
+        // Current white edge is already staged
+        if (white_edges_staged[target_index]) begin
+
+            // Move on to the next white edge
+            if (target_index < 2'd3) begin
+                target_index <= target_index + 1'b1;
             end
-            
+
+            // All four white edges have been staged
+            else begin
+                white_edges_staging_done <= 1'b1;
+            end
+
         end
+
+        // If the current edge is not staged,
+        // keep target_index the same.
+        // Solver logic will use its position/orientation
+        // to determine which move to perform.
 
     end
 
+end
+always_comb begin
+
+    case (target_index)
+
+        2'd0: target_edge = UF;
+        2'd1: target_edge = UR;
+        2'd2: target_edge = UB;
+        2'd3: target_edge = UL;
+
+        default: target_edge = UF;
+
+    endcase
 
 end
 
-
+endmodule

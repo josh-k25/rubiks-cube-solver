@@ -112,7 +112,7 @@ always_comb begin
 
         if (epIn[i] == target_edge) begin
 
-            //' is a systemverilog typecast
+            //' is a SystemVerilog typecast
             target_edge_position = edge'(i);
             target_edge_orientation = eoIn[i];
             target_edge_found = 1'b1;
