@@ -1,16 +1,17 @@
 import cube_defs_pkg::*;
 
+
 module stage_detector(
     input logic [2:0] cpIn [0:7],
     input logic [1:0] coIn [0:7],
     input logic [3:0] epIn [0:11],
     input logic eoIn [0:11],
 
-    output logic white_cross_solved
-    output logic first_layer_done
-    output logic second_layer_done
-    output logic third_layer_done
-    output logic cube_solved
+    output logic white_cross_solved,
+    output logic first_layer_done,
+    output logic second_layer_done,
+    output logic third_layer_done,
+
 );
 
 always_comb begin
@@ -93,8 +94,11 @@ else
         coIn[DBL] == 2'd0 &&
         coIn[DRB] == 2'd0
     )
-        cube_solved = 1'b1;
+        third_layer_done = 1'b1;
     else
-        cube_solved = 1'b0;
+        third_layer_done = 1'b0;
+    
+    end
 
-end
+
+endmodule

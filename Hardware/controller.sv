@@ -57,7 +57,7 @@ module controller (
     // To move sequencer
     output moves move,
     output logic move_start,
-
+    
     // Tells future LBL logic that scrambling is finished
     output logic solve_enable
 );

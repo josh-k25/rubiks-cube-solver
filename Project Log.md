@@ -403,4 +403,80 @@
   - Entire cube solved.
   - Recorded solution replayed successfully on a fresh copy of the scramble.
 
-  
+## 2026-09-17
+
+### Worked on
+
+- Started RTL implementation of the Rubik’s Cube solver.
+- Created shared enums for edges, corners, and moves.
+- Built the cube state using `cp`, `co`, `ep`, and `eo` register arrays.
+- Added reset logic to initialize the solved cube.
+- Started the move engine using the six base moves:
+  - U, R, F, D, L, B
+- Translated the Python move mappings into SystemVerilog.
+- Started stage-detection logic for the main LBL stages.
+
+### Learned
+
+- Packages are useful for sharing enums and constants.
+- The cube state maps well to fixed register arrays.
+- Move mappings can use:
+  - `mapping[destination] = source`
+- Combinational logic is a good fit for move application and cube-status checks.
+
+### Problems
+
+- Translating Python structures into fixed RTL hardware.
+- Keeping cubie identity, position, and orientation separate.
+- Deciding how to organize the solver without putting everything into one FSM.
+
+### Next
+
+- Build the move sequencer.
+- Store LBL algorithms in ROM.
+- Continue the solver/controller.
+- Test the six base moves.
+
+
+## 2026-09-18
+
+### Worked on
+
+- Created a ROM-style structure for fixed LBL move sequences.
+- Used a 2D move array with separate sequence lengths.
+- Designed the main solver architecture:
+  - Cube state
+  - Cube status
+  - Stage detector
+  - Solver/controller
+  - Sequence ROM
+  - Move sequencer
+  - Move engine
+- Added solved-status arrays for edges and corners.
+- Started white-edge staging detection.
+- Defined a staged white edge as:
+  - On the D layer
+  - Orientation 0
+- Planned a target index to process the white edges in a fixed order.
+
+### Learned
+
+- Fixed move sequences are better stored as constant arrays than large nested `case` statements.
+- The ROM only outputs a move; another controller must advance `step_index`.
+- Cube-status logic should report facts about the cube.
+- The solver should use those facts to decide what move or sequence to execute.
+- Hardware can check many cubies in parallel.
+
+### Problems
+
+- Separating fixed sequence data from control logic.
+- Tracking specific cubies while the cube representation is `position -> cubie`.
+- Coordinating move execution, sequence stepping, and solver control.
+
+### Next
+
+- Finish white-edge staging detection.
+- Implement the white-edge target index.
+- Build white-cross staging control.
+- Connect the sequence ROM, move sequencer, and move engine.
+- Verify the white cross end-to-end.
